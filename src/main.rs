@@ -1,4 +1,4 @@
-use std::{error::Error, fs::ReadDir, path::PathBuf, str::FromStr};
+use std::{error::Error, fs::ReadDir};
 
 use grep::{
     matcher::Matcher,
@@ -19,16 +19,18 @@ fn parse(strict: bool, dir: ReadDir) -> Result<(), Box<dyn Error>> {
     for file in dir {
         let filebuf = file?.path();
 
-        if filebuf == PathBuf::from_str("./.git")?
-            || filebuf == PathBuf::from_str("./target")?
-            || filebuf == PathBuf::from_str("./Cargo.lock")?
-        {
-            continue;
-        }
-
         if filebuf.metadata()?.is_dir() {
             parse(strict, std::fs::read_dir(filebuf)?)?;
             continue;
+        }
+
+        match filebuf.extension() {
+            Some(ext) => {
+                if ext != "rs" {
+                    continue;
+                }
+            }
+            None => continue,
         }
 
         searcher.search_path(
@@ -36,15 +38,14 @@ fn parse(strict: bool, dir: ReadDir) -> Result<(), Box<dyn Error>> {
             &filebuf,
             UTF8(|num, line| {
                 if !nolint_matcher.is_match(line.as_bytes())? {
-                    println!(
+                    print!(
                         "{}:{} : {}",
                         &filebuf.to_str().expect("Should be able to stringify file"),
                         num,
                         line
                     );
-                    return Ok(true);
                 }
-                Ok(false)
+                Ok(true)
             }),
         )?;
     }
