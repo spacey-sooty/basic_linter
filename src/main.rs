@@ -1,14 +1,12 @@
 use std::{error::Error, fs::ReadDir};
 
 use grep::{
-    matcher::Matcher,
     regex::RegexMatcher,
     searcher::{sinks::UTF8, SearcherBuilder},
 };
 
 fn parse(strict: bool, dir: ReadDir) -> Result<(), Box<dyn Error>> {
     let mut searcher = SearcherBuilder::new().build();
-    let nolint_matcher = RegexMatcher::new("//\\sNOLINT")?;
 
     let matcher = if strict {
         RegexMatcher::new("unwrap|unsafe|clone|panic|expect")? // NOLINT
@@ -37,7 +35,7 @@ fn parse(strict: bool, dir: ReadDir) -> Result<(), Box<dyn Error>> {
             &matcher,
             &filebuf,
             UTF8(|num, line| {
-                if !nolint_matcher.is_match(line.as_bytes())? {
+                if !line.contains("// NOLINT") {
                     print!(
                         "{}:{} : {}",
                         &filebuf.to_str().expect("Should be able to stringify file"),
